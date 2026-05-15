@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UpKeep — The Art of the Morning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  /* ─── RESET & BASE ─────────────────────────────────────────────── */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg:         #F9F9F7;
+    --bg-dark:    #0E0E0C;
+    --ink:        #1A1A18;
+    --ink-muted:  #6B6B68;
+    --ink-faint:  #ABABAB;
+    --rule:       #E0E0DC;
+    --navy:       #0A1628;
+    --navy-mid:   #1B2D4A;
+    --white:      #FFFFFF;
+    --serif:      'Cormorant Garamond', Georgia, serif;
+    --sans:       'DM Sans', sans-serif;
+    --ease:       cubic-bezier(0.25, 0.1, 0.25, 1);
+    --ease-out:   cubic-bezier(0.0, 0.0, 0.2, 1);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.6;
+    cursor: none;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ─── CUSTOM CURSOR ─────────────────────────────────────────────── */
+  #cursor-ring {
+    position: fixed;
+    top: 0; left: 0;
+    width: 32px; height: 32px;
+    border: 1px solid var(--ink);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width 0.35s var(--ease), height 0.35s var(--ease),
+                border-color 0.35s var(--ease), opacity 0.2s;
+    opacity: 0;
+  }
+  #cursor-dot {
+    position: fixed;
+    top: 0; left: 0;
+    width: 4px; height: 4px;
+    background: var(--ink);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: background 0.2s, opacity 0.2s;
+    opacity: 0;
+  }
+  body.cursor-visible #cursor-ring,
+  body.cursor-visible #cursor-dot { opacity: 1; }
+  body.cursor-hover #cursor-ring {
+    width: 52px; height: 52px;
+    border-color: var(--navy);
+    background: transparent;
+  }
+  body.cursor-hover #cursor-dot { background: var(--navy); }
+  body.cursor-dark #cursor-ring { border-color: rgba(255,255,255,0.5); }
+  body.cursor-dark #cursor-dot  { background: var(--white); }
+
+  /* ─── UTILITY ───────────────────────────────────────────────────── */
+  .container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px;
+  }
+  .rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 0;
+  }
+
+  /* ─── REVEAL ANIMATIONS ─────────────────────────────────────────── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.85s var(--ease-out), transform 0.85s var(--ease-out);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .reveal-fast {
+    opacity: 0;
+    transition: opacity 0.55s var(--ease-out), transform 0.55s var(--ease-out);
+    transform: translateY(16px);
+  }
+  .reveal-fast.visible { opacity: 1; transform: translateY(0); }
+
+  .delay-1 { transition-delay: 0.1s !important; }
+  .delay-2 { transition-delay: 0.22s !important; }
+  .delay-3 { transition-delay: 0.36s !important; }
+  .delay-4 { transition-delay: 0.5s !important; }
+  .delay-5 { transition-delay: 0.65s !important; }
+
+  /* ─── NAV ───────────────────────────────────────────────────────── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 0;
+    background: rgba(249,249,247,0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.4s;
+  }
+  nav.scrolled { border-bottom-color: var(--rule); }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 68px;
+  }
+  .wordmark {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 1.35rem;
+    letter-spacing: 0.22em;
+    color: var(--ink);
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+  .nav-cta {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--navy);
+    text-decoration: none;
+    border: 1px solid var(--navy);
+    padding: 9px 22px;
+    transition: background 0.3s, color 0.3s;
+  }
+  .nav-cta:hover { background: var(--navy); color: var(--white); }
+
+  /* ─── HERO ──────────────────────────────────────────────────────── */
+  #hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 120px;
+    padding-bottom: 80px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-label {
+    font-family: var(--sans);
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 40px;
+    display: inline-block;
+  }
+  .hero-headline {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(3.4rem, 8vw, 8rem);
+    line-height: 1.0;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    max-width: 900px;
+    margin-bottom: 36px;
+  }
+  .hero-headline em {
+    font-style: italic;
+    color: var(--navy);
+  }
+  .hero-sub {
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 300;
+    line-height: 1.8;
+    color: var(--ink-muted);
+    max-width: 420px;
+    margin-bottom: 56px;
+    letter-spacing: 0.01em;
+  }
+  .hero-form-area {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .btn-primary {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--white);
+    background: var(--navy);
+    text-decoration: none;
+    padding: 16px 38px;
+    border: 1px solid var(--navy);
+    position: relative;
+    overflow: hidden;
+    transition: background 0.35s, color 0.35s;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--white);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s var(--ease);
+    z-index: 0;
+  }
+  .btn-primary:hover::after { transform: scaleX(1); }
+  .btn-primary span { position: relative; z-index: 1; }
+  .btn-primary:hover span { color: var(--navy); }
+  .btn-primary:hover { color: var(--navy); }
+
+  .hero-note {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+  }
+  .hero-scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 48px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0.4;
+    font-size: 0.62rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    font-family: var(--sans);
+  }
+  .scroll-line {
+    width: 40px;
+    height: 1px;
+    background: var(--ink);
+    animation: scrollPulse 2.2s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.4; transform: scaleX(1); }
+    50% { opacity: 1; transform: scaleX(1.4); }
+  }
+
+  /* ─── ETHOS STRIP ───────────────────────────────────────────────── */
+  #ethos {
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 28px 0;
+    overflow: hidden;
+  }
+  .ethos-track {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    white-space: nowrap;
+    animation: marquee 22s linear infinite;
+    width: max-content;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .ethos-item {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    padding: 0 56px;
+  }
+  .ethos-dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--ink-faint);
+    flex-shrink: 0;
+  }
+
+  /* ─── PRODUCT SECTION ───────────────────────────────────────────── */
+  #product {
+    padding: 160px 0;
+  }
+  .section-label {
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 80px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .section-label::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: var(--ink-muted);
+  }
+  .product-intro {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    max-width: 780px;
+    margin-bottom: 100px;
+  }
+  .feature-list { list-style: none; }
+  .feature-item {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr;
+    gap: 0 48px;
+    align-items: start;
+    padding: 44px 0;
+    border-top: 1px solid var(--rule);
+    position: relative;
+  }
+  .feature-item:last-child { border-bottom: 1px solid var(--rule); }
+  .feature-num {
+    font-family: var(--serif);
+    font-size: 0.8rem;
+    font-weight: 300;
+    color: var(--ink-faint);
+    letter-spacing: 0.1em;
+    padding-top: 4px;
+  }
+  .feature-name {
+    font-family: var(--serif);
+    font-size: 1.55rem;
+    font-weight: 400;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+  }
+  .feature-desc {
+    font-family: var(--sans);
+    font-size: 0.88rem;
+    font-weight: 300;
+    color: var(--ink-muted);
+    line-height: 1.75;
+    padding-top: 4px;
+  }
+  .feature-item .feature-tag {
+    display: none;
+  }
+
+  /* ─── AI SECTION ────────────────────────────────────────────────── */
+  #intelligence {
+    background: var(--navy);
+    padding: 140px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  #intelligence::before {
+    content: 'AI';
+    position: absolute;
+    right: -40px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--serif);
+    font-size: 28vw;
+    font-weight: 300;
+    color: rgba(255,255,255,0.02);
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+  .intelligence-label {
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 60px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .intelligence-label::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: rgba(255,255,255,0.35);
+  }
+  .intelligence-headline {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(2rem, 4.5vw, 4rem);
+    line-height: 1.2;
+    color: var(--white);
+    max-width: 700px;
+    margin-bottom: 52px;
+  }
+  .intelligence-headline em { font-style: italic; color: rgba(255,255,255,0.55); }
+  .intelligence-body {
+    font-family: var(--sans);
+    font-size: 0.93rem;
+    font-weight: 300;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.9;
+    max-width: 480px;
+    margin-bottom: 64px;
+  }
+  .pill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    list-style: none;
+  }
+  .pill {
+    font-family: var(--sans);
+    font-size: 0.65rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 8px 18px;
+    transition: border-color 0.3s, color 0.3s;
+  }
+  .pill:hover { border-color: rgba(255,255,255,0.5); color: var(--white); }
+
+  /* ─── EARLY ACCESS ──────────────────────────────────────────────── */
+  #early-access {
+    padding: 160px 0;
+    text-align: center;
+    position: relative;
+  }
+  .early-eyebrow {
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 40px;
+  }
+  .early-headline {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(3rem, 7vw, 6.5rem);
+    line-height: 1.0;
+    color: var(--ink);
+    margin-bottom: 0;
+    letter-spacing: -0.01em;
+  }
+  .early-headline em { font-style: italic; color: var(--navy); }
+  .early-divider {
+    width: 1px;
+    height: 80px;
+    background: var(--rule);
+    margin: 60px auto;
+  }
+  .early-copy {
+    font-family: var(--sans);
+    font-size: 0.93rem;
+    font-weight: 300;
+    color: var(--ink-muted);
+    line-height: 1.85;
+    max-width: 440px;
+    margin: 0 auto 56px;
+  }
+  .early-copy strong {
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--rule);
+    padding: 10px 24px;
+    font-family: var(--sans);
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 60px;
+  }
+  .count-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #4CAF50;
+    animation: pulse-green 2s infinite;
+  }
+  @keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ─── FINAL CTA ─────────────────────────────────────────────────── */
+  #final-cta {
+    background: var(--bg-dark);
+    padding: 160px 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  #final-cta::before {
+    content: 'UPKEEP';
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--serif);
+    font-size: 38vw;
+    font-weight: 300;
+    color: rgba(255,255,255,0.018);
+    pointer-events: none;
+    user-select: none;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .cta-label {
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 44px;
+    position: relative;
+    z-index: 1;
+  }
+  .cta-headline {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(2.2rem, 5vw, 4.5rem);
+    line-height: 1.15;
+    color: var(--white);
+    max-width: 680px;
+    margin: 0 auto 60px;
+    position: relative;
+    z-index: 1;
+  }
+  .btn-light {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--bg-dark);
+    background: var(--white);
+    text-decoration: none;
+    padding: 16px 44px;
+    border: 1px solid var(--white);
+    position: relative;
+    overflow: hidden;
+    transition: background 0.35s, color 0.35s;
+    z-index: 1;
+  }
+  .btn-light::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.4);
+    transform: scale(1.12);
+    opacity: 0;
+    transition: transform 0.5s var(--ease), opacity 0.5s;
+  }
+  .btn-light:hover::after { transform: scale(1); opacity: 1; }
+  .btn-light:hover { background: rgba(255,255,255,0.85); }
+  .cta-sub-note {
+    position: relative;
+    z-index: 1;
+    font-family: var(--sans);
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.25);
+    margin-top: 24px;
+    letter-spacing: 0.06em;
+  }
+
+  /* ─── FOOTER ────────────────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    background: var(--bg-dark);
+    padding: 32px 0;
+  }
+  .footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .footer-wordmark {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 1.1rem;
+    letter-spacing: 0.22em;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+  .footer-copy {
+    font-family: var(--sans);
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.1em;
+  }
+  .footer-links {
+    display: flex;
+    gap: 28px;
+    list-style: none;
+  }
+  .footer-links a {
+    font-family: var(--sans);
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.2);
+    text-decoration: none;
+    transition: color 0.25s;
+  }
+  .footer-links a:hover { color: rgba(255,255,255,0.55); }
+
+  /* ─── RESPONSIVE ────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .container { padding: 0 28px; }
+    .feature-item {
+      grid-template-columns: 40px 1fr;
+      grid-template-rows: auto auto;
+      gap: 8px 24px;
+    }
+    .feature-desc { grid-column: 2; }
+    .hero-scroll-hint { left: 28px; }
+  }
+  @media (max-width: 640px) {
+    body { cursor: auto; }
+    #cursor-ring, #cursor-dot { display: none; }
+    .container { padding: 0 22px; }
+    .hero-form-area { flex-direction: column; align-items: flex-start; }
+    .feature-item { grid-template-columns: 1fr; }
+    .feature-num { display: none; }
+    .footer-inner { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .footer-links { flex-wrap: wrap; gap: 16px; }
+    nav .container { padding: 0 22px; }
+    #intelligence::before { font-size: 40vw; right: -20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Custom Cursor -->
+<div id="cursor-ring"></div>
+<div id="cursor-dot"></div>
+
+<!-- ─── NAV ─── -->
+<nav id="navbar">
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#" class="wordmark">UpKeep</a>
+      <a href="#early-access" class="nav-cta">Join Waitlist</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── HERO ─── -->
+<section id="hero">
+  <div class="container">
+    <span class="hero-label reveal reveal-fast">Coming Soon — 2025</span>
+    <h1 class="hero-headline reveal delay-1">
+      The Art of the<br><em>Morning Ritual.</em>
+    </h1>
+    <p class="hero-sub reveal delay-2">
+      A personal grooming intelligence for men who care about how they show up in the world — built for those who treat presence as craft.
+    </p>
+    <div class="hero-form-area reveal delay-3">
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSdpJ7zClLGXxL0Pgek5XyVx0nRv34C7H-7ggPVcMveqVOXzuw/viewform?usp=dialog" target="_blank" rel="noopener" class="btn-primary">
+        <span>Request Early Access</span>
+      </a>
+      <span class="hero-note">Limited founding member spots available</span>
+    </div>
+    <div class="hero-scroll-hint">
+      <span class="scroll-line"></span>
+      Scroll
+    </div>
+  </div>
+</section>
+
+<!-- ─── ETHOS STRIP ─── -->
+<div id="ethos">
+  <div class="ethos-track">
+    <span class="ethos-item">Skincare</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Fragrance</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Hair Care</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Facial Hair</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Morning Ritual</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Daily Routine</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Personalized Guidance</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Expert Backed</span><span class="ethos-dot"></span>
+    <!-- duplicate for seamless loop -->
+    <span class="ethos-item">Skincare</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Fragrance</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Hair Care</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Facial Hair</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Morning Ritual</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Daily Routine</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Personalized Guidance</span><span class="ethos-dot"></span>
+    <span class="ethos-item">Expert Backed</span><span class="ethos-dot"></span>
+  </div>
+</div>
+
+<!-- ─── PRODUCT SECTION ─── -->
+<section id="product">
+  <div class="container">
+    <p class="section-label reveal">What Rite does</p>
+    <p class="product-intro reveal delay-1">
+      Not a trend aggregator. Not another wellness app. UpKeep is a quiet, precise tool — built around you, refined over time — for men who understand that how you look reflects how you live.
+    </p>
+    <ul class="feature-list">
+      <li class="feature-item reveal">
+        <span class="feature-num">01</span>
+        <span class="feature-name">Skincare</span>
+        <span class="feature-desc">UpKeep builds a daily skincare protocol around your skin type, climate, and concerns — adjusting as your skin changes. No guesswork. No wasted shelf space.</span>
+      </li>
+      <li class="feature-item reveal delay-1">
+        <span class="feature-num">02</span>
+        <span class="feature-name">Facial Hair</span>
+        <span class="feature-desc">Shape, length, maintenance — your beard or clean shave managed with precision. UpKeep suggests products, timing, and technique based on your face structure and hair type.</span>
+      </li>
+      <li class="feature-item reveal delay-2">
+        <span class="feature-num">03</span>
+        <span class="feature-name">Hair Care</span>
+        <span class="feature-desc">From scalp health to styling, UpKeep provides a structured, expert-guided hair routine built for how you actually live — not how someone else styles their life.</span>
+      </li>
+      <li class="feature-item reveal delay-3">
+        <span class="feature-num">04</span>
+        <span class="feature-name">Fragrance</span>
+        <span class="feature-desc">Build a considered fragrance wardrobe. Rite helps you understand your scent profile, match fragrances to context, and layer them with intention.</span>
+      </li>
+      <li class="feature-item reveal delay-4">
+        <span class="feature-num">05</span>
+        <span class="feature-name">Morning Routine</span>
+        <span class="feature-desc">Everything, sequenced. UpKeep assembles a precise, time-aware morning routine — the right steps, the right products, the right order — every single morning.</span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─── AI INTELLIGENCE SECTION ─── -->
+<section id="intelligence">
+  <div class="container">
+    <p class="intelligence-label reveal">The Intelligence</p>
+    <h2 class="intelligence-headline reveal delay-1">
+      Personal to you.<br><em>Refined over time.</em>
+    </h2>
+    <p class="intelligence-body reveal delay-2">
+      UpKeep doesn't serve generic advice. It learns your skin, your habits, your environment. Its recommendations are built on dermatological science, fragrance expertise, and barber craft — curated by specialists and adapted by AI into something entirely yours.
+    </p>
+    <ul class="pill-list reveal delay-3">
+      <li class="pill">AI Personalization</li>
+      <li class="pill">Dermatologist-Reviewed</li>
+      <li class="pill">Expert Guidance</li>
+      <li class="pill">Adaptive Routines</li>
+      <li class="pill">Product Intelligence</li>
+      <li class="pill">Content Creator Ready</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─── EARLY ACCESS ─── -->
+<section id="early-access">
+  <div class="container">
+    <p class="early-eyebrow reveal">Early Access</p>
+    <h2 class="early-headline reveal delay-1">
+      Be among the<br><em>first.</em>
+    </h2>
+    <div class="early-divider reveal delay-2"></div>
+    <p class="early-copy reveal delay-3">
+      Founding members receive <strong>lifetime early pricing</strong>, direct input into the product, and priority access to every feature as it ships. We're building this with a small group first.
+    </p>
+    <div class="count-badge reveal delay-4">
+      <span class="count-dot"></span>
+      Waitlist now open
+    </div>
+    <div class="reveal delay-5">
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSdpJ7zClLGXxL0Pgek5XyVx0nRv34C7H-7ggPVcMveqVOXzuw/viewform?usp=dialog" target="_blank" rel="noopener" class="btn-primary">
+        <span>Join the Waitlist</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FINAL CTA ─── -->
+<section id="final-cta">
+  <div class="container">
+    <p class="cta-label reveal">Begin</p>
+    <h2 class="cta-headline reveal delay-1">
+      The morning is the first impression you make on the day.
+    </h2>
+    <div class="reveal delay-2">
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSdpJ7zClLGXxL0Pgek5XyVx0nRv34C7H-7ggPVcMveqVOXzuw/viewform?usp=dialog" target="_blank" rel="noopener" class="btn-light">
+        Request Access
+      </a>
+    </div>
+    <p class="cta-sub-note reveal delay-3">Free to join. No commitment required.</p>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <a href="#" class="footer-wordmark">UpKeep</a>
+      <span class="footer-copy">© 2025 UpKeep. All rights reserved.</span>
+      <ul class="footer-links">
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Contact</a></li>
+        <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSdpJ7zClLGXxL0Pgek5XyVx0nRv34C7H-7ggPVcMveqVOXzuw/viewform?usp=dialog" target="_blank">Waitlist</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ─── CURSOR ─────────────────────────────────────────────────────── */
+  const isTouchDevice = () => window.matchMedia('(hover: none)').matches;
+  const ring = document.getElementById('cursor-ring');
+  const dot  = document.getElementById('cursor-dot');
+  let mouseX = 0, mouseY = 0;
+  let ringX  = 0, ringY  = 0;
+
+  if (!isTouchDevice()) {
+    document.addEventListener('mousemove', e => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      dot.style.left  = mouseX + 'px';
+      dot.style.top   = mouseY + 'px';
+      document.body.classList.add('cursor-visible');
+    });
+
+    document.addEventListener('mouseleave', () => {
+      document.body.classList.remove('cursor-visible');
+    });
+
+    // Smooth ring follow
+    function animateRing() {
+      ringX += (mouseX - ringX) * 0.1;
+      ringY += (mouseY - ringY) * 0.1;
+      ring.style.left = ringX + 'px';
+      ring.style.top  = ringY + 'px';
+      requestAnimationFrame(animateRing);
+    }
+    animateRing();
+
+    // Hover states
+    const hoverEls = document.querySelectorAll('a, button, .btn-primary, .btn-light, .nav-cta, .pill');
+    hoverEls.forEach(el => {
+      el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+      el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+    });
+
+    // Dark section cursor
+    const darkSections = document.querySelectorAll('#intelligence, #final-cta, footer');
+    darkSections.forEach(sec => {
+      sec.addEventListener('mouseenter', () => document.body.classList.add('cursor-dark'));
+      sec.addEventListener('mouseleave', () => document.body.classList.remove('cursor-dark'));
+    });
+  }
+
+  /* ─── NAV SCROLL STATE ───────────────────────────────────────────── */
+  const navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 20);
+  }, { passive: true });
+
+  /* ─── INTERSECTION OBSERVER REVEALS ─────────────────────────────── */
+  const revealEls = document.querySelectorAll('.reveal, .reveal-fast');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  revealEls.forEach(el => observer.observe(el));
+
+  /* ─── HERO LABEL IMMEDIATE REVEAL ──────────────────────────────── */
+  window.addEventListener('load', () => {
+    const heroEls = document.querySelectorAll('#hero .reveal, #hero .reveal-fast');
+    setTimeout(() => {
+      heroEls.forEach((el, i) => {
+        setTimeout(() => el.classList.add('visible'), i * 120);
+      });
+    }, 180);
+  });
+</script>
+
+</body>
+</html>
